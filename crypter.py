@@ -59,6 +59,7 @@ class Crypter(object):
         return self
 
     def read_file(self, file_name):
+        self.reset()
         with open(file_name, 'rb') as f:
             return self._file_decode(self.decrypt(f.read(), raw=True))
 
@@ -93,7 +94,7 @@ class Crypter(object):
     def decrypt(self, data, raw=False):
         if not raw:
             data = data.decode('base64')
-        return self.cipher.decrypt(text).rstrip(self.PADDING).strip()
+        return self.cipher.decrypt(data).rstrip(self.PADDING).strip()
 
     @classmethod
     def _file_decode(cls, data):
@@ -178,8 +179,8 @@ if __name__ == '__main__':
     print 'Encrypted base64:', repr(encrypted)
     print 'Decrypted string:', repr(crypter.reset().decrypt(encrypted))
     crypter.reset().write_file(file_name, message)
-    print 'Decrypted file  :', repr(crypter.reset().read_file(file_name))
+    print 'Decrypted file  :', repr(crypter.read_file(file_name))
     crypter.reset().write_json(file_name, data)
-    print 'Decrypted json  :', repr(crypter.reset().read_file(file_name))
+    print 'Decrypted json  :', repr(crypter.read_file(file_name))
     crypter.reset().write_pickle(file_name, data)
-    print 'Decrypted pickle:', repr(crypter.reset().read_file(file_name))
+    print 'Decrypted pickle:', repr(crypter.read_file(file_name))
