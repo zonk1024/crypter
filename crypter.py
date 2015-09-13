@@ -45,7 +45,10 @@ class Crypter(object):
 
     @property
     def iv(self):
-        return self.raw_key[32:48]
+        if not hasattr(self, '_iv'):
+            with open('/dev/urandom', 'rb') as f:
+                self._iv = f.read(16)
+        return self._iv
 
     @property
     def cipher(self):
@@ -56,6 +59,8 @@ class Crypter(object):
     def reset(self):
         if hasattr(self, '_cipher'):
             del self._cipher
+        if hasattr(self, '_iv'):
+            del self._iv
         return self
 
     def read_file(self, file_name):
@@ -88,16 +93,19 @@ class Crypter(object):
     def encrypt(self, data, raw=False):
         encrypted = self.cipher.encrypt(self.pad(data))
         if raw:
-            return encrypted
-        return encrypted.encode('base64').strip()
+            return self.iv + encrypted
+        return (self.iv + encrypted).encode('base64').strip()
 
     def decrypt(self, data, raw=False):
         if not raw:
             data = data.decode('base64')
-        return self.cipher.decrypt(data).rstrip(self.PADDING).strip()
+        iv, data = data[:16], data[16:]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return cipher.decrypt(data).rstrip(self.PADDING).strip()
 
     @classmethod
     def _file_decode(cls, data):
+        """{z,b,l}{j,p}<data_len><pad><DATA>"""
         alg = data[0]
         header = data[1]
         idx = data.find(cls.PADDING)
@@ -147,8 +155,9 @@ class Crypter(object):
 
     @classmethod
     def pad(cls, data, block_size=BLOCK_SIZE):
+        data_and_iv_len = len(data) + 16
         block_size = block_size or cls.BLOCK_SIZE
-        return data + (block_size - len(data) % block_size) * cls.PADDING
+        return data + (block_size - data_and_iv_len % block_size) * cls.PADDING
 
     @classmethod
     def pad_random(cls, data, block_size=WALLET_SIZE):
